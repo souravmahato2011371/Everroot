@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import RAPIER from '@dimforge/rapier3d-compat';
 
 type ResourceKind = 'berries' | 'wood' | 'stone';
 type ResourceNode = { kind: ResourceKind; group: THREE.Group; position: THREE.Vector3; active: boolean };
@@ -23,13 +24,13 @@ const renderer = new THREE.WebGLRenderer({
   alpha: false,
   powerPreference: 'low-power'
 });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.35));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.16;
+renderer.toneMappingExposure = 1.04;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap;
 renderer.domElement.id = 'world-canvas';
 document.querySelector('#game')?.appendChild(renderer.domElement);
 
@@ -37,13 +38,30 @@ const player = new THREE.Group();
 const playerVisual = new THREE.Group();
 const resources: ResourceNode[] = [];
 const critters: Critter[] = [];
+const treeObstacles: Array<{ x: number; z: number; radius: number; height: number }> = [];
+const boxObstacles: Array<{ x: number; y: number; z: number; hx: number; hy: number; hz: number }> = [];
+const rockObstacles: Array<{ x: number; z: number; radius: number }> = [];
+const dynamicProps: Array<{ body: any; mesh: THREE.Mesh }> = [];
+let terrainGeometry: THREE.BufferGeometry | null = null;
+let terrainMesh: THREE.Mesh | null = null;
+let physicsWorld: any = null;
+let characterController: any = null;
+let playerBody: any = null;
+let playerCollider: any = null;
+let physicsAccumulator = 0;
+let verticalVelocity = 0;
+let isGrounded = false;
+let jumpRequested = false;
+let isRunning = false;
+const PLAYER_CAPSULE_CENTER = 1.08;
+const PHYSICS_STEP = 1 / 60;
+const playerVelocity = new THREE.Vector3();
 const windTrees: Array<{ group: THREE.Group; phase: number; strength: number }> = [];
 const waterRipples: THREE.Mesh[] = [];
 const floatingSeeds: THREE.Mesh[] = [];
 const clock = new THREE.Clock();
 const raycaster = new THREE.Raycaster();
 const pointer = new THREE.Vector2();
-const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 const walkTarget: THREE.Vector3 | null = null;
 let targetPosition: THREE.Vector3 | null = walkTarget;
 let moveX = 0;
@@ -53,6 +71,17 @@ let joystickX = 0;
 let joystickY = 0;
 let playerMoving = false;
 let elapsed = 0;
+let cameraYaw = 0;
+let cameraPitch = 0.48;
+let cameraDistance = 15.5;
+let cameraPointerId: number | null = null;
+let cameraLastX = 0;
+let cameraLastY = 0;
+let cameraDragDistance = 0;
+let cameraPointerStartedAt = 0;
+let pinchStartDistance = 0;
+let pinchStartZoom = cameraDistance;
+const activePointers = new Map<number, { x: number; y: number }>();
 
 const ui = {
   loading: document.querySelector<HTMLElement>('#loading')!,
@@ -62,7 +91,9 @@ const ui = {
   joystick: document.querySelector<HTMLElement>('#joystick')!,
   knob: document.querySelector<HTMLElement>('#joystick-knob')!,
   interact: document.querySelector<HTMLButtonElement>('#interact')!,
-  save: document.querySelector<HTMLButtonElement>('#save')
+  save: document.querySelector<HTMLButtonElement>('#save'),
+  run: document.querySelector<HTMLButtonElement>('#run'),
+  jump: document.querySelector<HTMLButtonElement>('#jump')
 };
 
 function terrainHeight(x: number, z: number): number {
