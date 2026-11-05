@@ -465,8 +465,10 @@ function addFenceAndSettlementDetails(): void {
   for (const x of [-9.5, 9.5]) {
     for (let z = -5.3; z <= 7.5; z += 2.5) addPost(x, z);
     const rail1 = addOutlinedMesh(fence, new THREE.CylinderGeometry(0.065, 0.075, 12.8, 6), lightWood, 25, 0.5);
+    rail1.rotation.x = Math.PI / 2;
     rail1.position.set(x, 0.42, 1.1);
     const rail2 = addOutlinedMesh(fence, new THREE.CylinderGeometry(0.065, 0.075, 12.8, 6), lightWood, 25, 0.5);
+    rail2.rotation.x = Math.PI / 2;
     rail2.position.set(x, 0.83, 1.1);
   }
   scene.add(fence);
