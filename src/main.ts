@@ -1351,72 +1351,106 @@ function animateCritters(time: number): void {
   });
 }
 
+function updateCamera(delta: number): void {
+  const horizontal = Math.cos(cameraPitch) * cameraDistance;
+  const desired = new THREE.Vector3(
+    player.position.x + Math.sin(cameraYaw) * horizontal,
+    player.position.y + 1.5 + Math.sin(cameraPitch) * cameraDistance,
+    player.position.z + Math.cos(cameraYaw) * horizontal
+  );
+  camera.position.lerp(desired, 1 - Math.exp(-7.5 * delta));
+  camera.lookAt(player.position.x, player.position.y + 1.2, player.position.z);
+}
+
 function animate(): void {
-  const delta = Math.min(clock.getDelta(), 0.04);
+  const delta = Math.min(clock.getDelta(), 0.05);
   elapsed += delta;
-
-  let dx = Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft'));
-  let dz = Number(keys.has('s') || keys.has('arrowdown')) - Number(keys.has('w') || keys.has('arrowup'));
+  let inputX = Number(keys.has('d') || keys.has('arrowright')) - Number(keys.has('a') || keys.has('arrowleft'));
+  let inputY = Number(keys.has('s') || keys.has('arrowdown')) - Number(keys.has('w') || keys.has('arrowup'));
   if (joystickPointer !== null) {
-    dx = joystickX;
-    dz = joystickY;
-  }
-  const length = Math.hypot(dx, dz);
-  if (length > 0.12) {
-    targetPosition = null;
-    dx /= Math.max(1, length);
-    dz /= Math.max(1, length);
-  } else if (targetPosition) {
-    dx = targetPosition.x - player.position.x;
-    dz = targetPosition.z - player.position.z;
-    const distance = Math.hypot(dx, dz);
-    if (distance < 0.45) {
-      targetPosition = null;
-      dx = 0;
-      dz = 0;
-    } else {
-      dx /= distance;
-      dz /= distance;
-    }
-  } else {
-    dx = 0;
-    dz = 0;
+    inputX = joystickX;
+    inputY = joystickY;
   }
 
-  playerMoving = Math.hypot(dx, dz) > 0.01;
-  if (playerMoving) {
-    player.position.x = THREE.MathUtils.clamp(player.position.x + dx * 7.2 * delta, -LIMIT, LIMIT);
-    player.position.z = THREE.MathUtils.clamp(player.position.z + dz * 7.2 * delta, -LIMIT, LIMIT);
-    player.rotation.y = Math.atan2(dx, -dz);
+  const forwardX = -Math.sin(cameraYaw);
+  const forwardZ = -Math.cos(cameraYaw);
+  const rightX = Math.cos(cameraYaw);
+  const rightZ = -Math.sin(cameraYaw);
+  let directionX = rightX * inputX + forwardX * -inputY;
+  let directionZ = rightZ * inputX + forwardZ * -inputY;
+  let directionLength = Math.hypot(directionX, directionZ);
+
+  if (directionLength < 0.1 && targetPosition) {
+    directionX = targetPosition.x - player.position.x;
+    directionZ = targetPosition.z - player.position.z;
+    directionLength = Math.hypot(directionX, directionZ);
+    if (directionLength < 0.55) {
+      targetPosition = null;
+      directionLength = 0;
+    }
+  } else if (directionLength > 0.1) {
+    targetPosition = null;
   }
-  player.position.y = terrainHeight(player.position.x, player.position.z) + (playerMoving ? Math.abs(Math.sin(elapsed * 9)) * 0.055 : 0);
-  playerVisual.position.y = playerMoving ? Math.sin(elapsed * 9) * 0.035 : Math.sin(elapsed * 2.2) * 0.018;
+
+  const hasDirection = directionLength > 0.001;
+  if (hasDirection) {
+    directionX /= directionLength;
+    directionZ /= directionLength;
+  } else {
+    directionX = 0;
+    directionZ = 0;
+  }
+
+  const sprint = isRunning || keys.has('shift');
+  const speed = sprint ? 7.4 : 4.35;
+  const desiredX = directionX * speed;
+  const desiredZ = directionZ * speed;
+  const acceleration = hasDirection ? 13.5 : 17.5;
+  const blend = 1 - Math.exp(-acceleration * delta);
+  playerVelocity.x += (desiredX - playerVelocity.x) * blend;
+  playerVelocity.z += (desiredZ - playerVelocity.z) * blend;
+  if (!hasDirection && Math.hypot(playerVelocity.x, playerVelocity.z) < 0.04) {
+    playerVelocity.x = 0;
+    playerVelocity.z = 0;
+  }
+
+  playerMoving = Math.hypot(playerVelocity.x, playerVelocity.z) > 0.18;
+  if (playerMoving) player.rotation.y = Math.atan2(playerVelocity.x, -playerVelocity.z);
+  stepPhysics(delta);
+
+  const gait = sprint ? 13 : 9;
+  playerVisual.position.y = playerMoving
+    ? Math.abs(Math.sin(elapsed * gait)) * 0.045
+    : Math.sin(elapsed * 2.1) * 0.018;
   const limbs = player.userData.limbs as THREE.Group[];
   limbs.forEach((limb, index) => {
-    limb.rotation.x = playerMoving ? Math.sin(elapsed * 9 + index * Math.PI) * 0.32 : 0;
+    limb.rotation.x = playerMoving ? Math.sin(elapsed * gait + index * Math.PI) * (sprint ? 0.48 : 0.32) : 0;
   });
 
   animateEnvironment(elapsed);
   animateCritters(elapsed);
-  const desiredCamera = new THREE.Vector3(player.position.x, player.position.y + 10.5, player.position.z + 16.5);
-  camera.position.lerp(desiredCamera, 1 - Math.pow(0.001, delta));
-  camera.lookAt(player.position.x, player.position.y + 1.0, player.position.z - 1.3);
+  updateCamera(delta);
   renderer.render(scene, camera);
 }
 
-try {
-  createWorld();
-  loadGame();
-  updateStats();
-  resize();
-  renderer.setAnimationLoop(animate);
-  ui.loading.classList.add('hidden');
-  showMessage('Welcome to Everroot. Follow the trail and see what grows.');
-} catch (error) {
-  console.error(error);
-  ui.loading.classList.add('hidden');
-  ui.error.classList.add('visible');
-  ui.error.textContent = error instanceof Error
-    ? `Everroot could not start: ${error.message}`
-    : 'Everroot could not start on this browser.';
+async function boot(): Promise<void> {
+  try {
+    createWorld();
+    loadGame();
+    await createPhysics();
+    updateStats();
+    resize();
+    renderer.setAnimationLoop(animate);
+    ui.loading.classList.add('hidden');
+    showMessage('Drag the right side to look around. Pinch to zoom. Find your path.');
+  } catch (error) {
+    console.error(error);
+    ui.loading.classList.add('hidden');
+    ui.error.classList.add('visible');
+    ui.error.textContent = error instanceof Error
+      ? 'Everroot could not start: ' + error.message
+      : 'Everroot could not start on this browser.';
+  }
 }
+
+void boot();
