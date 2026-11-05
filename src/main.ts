@@ -684,8 +684,14 @@ function addPond(): void {
   const pond = new THREE.Group();
   pond.position.set(x, terrainHeight(x, z) + 0.06, z);
   const water = new THREE.Mesh(
-    new THREE.CircleGeometry(6.3, 40),
-    new THREE.MeshStandardMaterial({ color: '#82aaa2', roughness: 0.3, metalness: 0.02 })
+    new THREE.CircleGeometry(6.3, 64),
+    new THREE.MeshPhysicalMaterial({
+      color: '#7fa9a5',
+      roughness: 0.19,
+      metalness: 0.05,
+      clearcoat: 0.9,
+      clearcoatRoughness: 0.13
+    })
   );
   water.rotation.x = -Math.PI / 2;
   water.scale.set(1.28, 0.68, 1);
