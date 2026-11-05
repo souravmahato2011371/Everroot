@@ -23,22 +23,15 @@ This is an early prototype, not the finished game. Art, animation, combat depth,
 - Browser local storage for the prototype save
 - GitHub Actions and GitHub Pages for deployment
 
-## Run locally in Acode
+## Development workflow
 
-1. Open this repository in Acode.
-2. Open its terminal and run `npm install`.
-3. Run `npm run dev -- --host 0.0.0.0`.
-4. Open the local preview address shown by Vite in your tablet browser.
+The project is designed to be developed through ChatGPT and GitHub only:
+- ChatGPT prepares and updates the project files in the connected GitHub repository.
+- GitHub Actions installs dependencies, type-checks the TypeScript, and builds the game in the cloud.
+- GitHub Pages hosts the playable browser version.
+- You can check commits, build results, and the game from GitHub on your Android tablet. No local coding app, PC, or terminal is part of the required workflow.
 
-No PC or Termux is required. The terminal built into Acode is sufficient for the local npm workflow.
-
-## Build
-
-```sh
-npm install
-npm run typecheck
-npm run build
-```
+GitHub Actions runs the checks automatically after each push to `main`.
 
 ## Controls
 
