@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 
 type Node = { x: number; y: number; amount: number; shape: Phaser.GameObjects.Arc; label: string };
-type Critter = { x: number; y: number; hp: number; body: Phaser.GameObjects.Arc; alive: boolean };
+type Critter = { x: number; y: number; hp: number; body: Phaser.GameObjects.Ellipse; alive: boolean };
+type Inventory = { berries: number; wood: number; stones: number };
 
 const WORLD = { width: 1800, height: 1400 };
 const SAVE_KEY = 'everroot-save-v1';
@@ -17,7 +18,7 @@ export class WorldScene extends Phaser.Scene {
   private joystickPointer: number | null = null;
   private joystickOrigin = new Phaser.Math.Vector2();
   private joystickVector = new Phaser.Math.Vector2();
-  private inventory = { berries: 0, wood: 0, stones: 0 };
+  private inventory: Inventory = { berries: 0, wood: 0, stones: 0 };
   private health = 5;
   private message!: Phaser.GameObjects.Text;
   private stats!: Phaser.GameObjects.Text;
@@ -266,7 +267,7 @@ export class WorldScene extends Phaser.Scene {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) return;
-      const data = JSON.parse(raw) as { inventory?: typeof this.inventory; health?: number; player?: { x: number; y: number } };
+      const data = JSON.parse(raw) as { inventory?: Partial<Inventory>; health?: number; player?: { x: number; y: number } };
       if (data.inventory) this.inventory = { ...this.inventory, ...data.inventory };
       if (data.health !== undefined) this.health = Phaser.Math.Clamp(data.health, 1, 5);
       if (data.player && Number.isFinite(data.player.x) && Number.isFinite(data.player.y)) this.moveTarget = new Phaser.Math.Vector2(data.player.x, data.player.y);
