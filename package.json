@@ -10,7 +10,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "three": "^0.187.0"
+    "three": "^0.187.0",
+    "@dimforge/rapier3d-compat": "^0.21.0"
   },
   "devDependencies": {
     "@types/node": "^22.15.30",
