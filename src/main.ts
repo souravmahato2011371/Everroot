@@ -480,37 +480,63 @@ function addBranch(parent: THREE.Group, start: THREE.Vector3, end: THREE.Vector3
 function addTree(x: number, z: number, scale: number): void {
   const tree = new THREE.Group();
   tree.position.set(x, terrainHeight(x, z), z);
-  const trunkMaterial = new THREE.MeshStandardMaterial({ color: '#806044', roughness: 1, flatShading: true });
-  const bark = new THREE.MeshStandardMaterial({ color: '#a17c58', roughness: 1, flatShading: true });
-  const palettes = [
-    ['#496f49', '#668653', '#8ba16a'],
-    ['#4b7252', '#73915b', '#9eaa72'],
-    ['#54734a', '#7e9455', '#b1aa75'],
-    ['#3f6954', '#63856c', '#91a58a']
+  const trunkHeight = 2.65 * scale;
+  const trunkMaterial = makeBarkMaterial();
+  const trunk = addOutlinedMesh(tree, new THREE.CylinderGeometry(0.28 * scale, 0.43 * scale, trunkHeight, 24, 5), trunkMaterial);
+  trunk.position.y = trunkHeight * 0.5;
+  const branchSpecs = [
+    [-0.35, 1.05, -0.85, 2.28, 0.08],
+    [0.18, 1.12, 0.72, 2.34, -0.1],
+    [-0.12, 1.48, -0.12, 2.95, 0.16],
+    [0.18, 1.65, 0.34, 3.15, 0.08]
   ];
-  const palette = palettes[Math.floor(seeded(x * 17 + z * 3) * palettes.length)];
-  const leafMaterials = palette.map((color) => new THREE.MeshStandardMaterial({
-    color, flatShading: true, roughness: 1
-  }));
-  addOutlinedMesh(tree, new THREE.CylinderGeometry(0.25 * scale, 0.43 * scale, 2.2 * scale, 7), trunkMaterial, 24, 0.58);
-  addBranch(tree, new THREE.Vector3(0, 0.95 * scale, 0), new THREE.Vector3(-0.72 * scale, 2.15 * scale, 0.05 * scale), 0.19 * scale, bark);
-  addBranch(tree, new THREE.Vector3(0.05 * scale, 1.12 * scale, 0), new THREE.Vector3(0.7 * scale, 2.35 * scale, -0.1 * scale), 0.17 * scale, bark);
-  addBranch(tree, new THREE.Vector3(0, 1.35 * scale, -0.02 * scale), new THREE.Vector3(0.08 * scale, 2.9 * scale, 0.15 * scale), 0.14 * scale, bark);
-  const crown1 = addOutlinedMesh(tree, new THREE.IcosahedronGeometry(1.48 * scale, 1), leafMaterials[0], 27, 0.54);
-  crown1.position.set(-0.58 * scale, 2.65 * scale, 0);
-  crown1.scale.set(1.06, 0.91, 0.96);
-  const crown2 = addOutlinedMesh(tree, new THREE.IcosahedronGeometry(1.38 * scale, 1), leafMaterials[1], 27, 0.54);
-  crown2.position.set(0.57 * scale, 3.1 * scale, -0.12 * scale);
-  crown2.scale.set(1.08, 1, 0.92);
-  const crown3 = addOutlinedMesh(tree, new THREE.IcosahedronGeometry(1.02 * scale, 1), leafMaterials[2], 27, 0.52);
-  crown3.position.set(0.02 * scale, 3.92 * scale, 0.08 * scale);
-  const crown4 = addOutlinedMesh(tree, new THREE.IcosahedronGeometry(0.82 * scale, 1), leafMaterials[1], 27, 0.5);
-  crown4.position.set(-1.02 * scale, 3.02 * scale, -0.12 * scale);
-  crown4.scale.set(0.95, 0.88, 0.92);
-  addSketchHatching(tree, 0, 3.05 * scale, 0, scale);
+  for (const [sx, sy, ex, ey, ez] of branchSpecs) {
+    const start = new THREE.Vector3(sx * scale, sy * scale, 0);
+    const end = new THREE.Vector3(ex * scale, ey * scale, ez * scale);
+    const direction = end.clone().sub(start);
+    const branch = addOutlinedMesh(tree, new THREE.CylinderGeometry(0.075 * scale, 0.15 * scale, direction.length(), 16, 3), trunkMaterial);
+    branch.position.copy(start).add(end).multiplyScalar(0.5);
+    branch.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), direction.normalize());
+  }
+  const palette = [
+    ['#315a3d', '#477249', '#5d8452'],
+    ['#365e43', '#527d4e', '#73915c'],
+    ['#3c6240', '#5f8050', '#84975a'],
+    ['#2e5546', '#47725d', '#6e8b70']
+  ];
+  const colors = palette[Math.floor(seeded(x * 17 + z * 3) * palette.length)];
+  const canopies = [
+    { x: -0.75, y: 2.95, z: 0.05, r: 1.52 },
+    { x: 0.68, y: 3.13, z: -0.15, r: 1.42 },
+    { x: -0.12, y: 4.05, z: 0.14, r: 1.24 },
+    { x: -1.15, y: 3.52, z: -0.15, r: 1.05 },
+    { x: 1.18, y: 3.55, z: 0.1, r: 1.1 }
+  ];
+  for (let i = 0; i < canopies.length; i++) {
+    const crown = canopies[i];
+    const canopy = addOutlinedMesh(tree, new THREE.SphereGeometry(crown.r * scale, 24, 18), makeLeafMaterial(colors[i % colors.length]));
+    canopy.position.set(crown.x * scale, crown.y * scale, crown.z * scale);
+    canopy.scale.set(1.08, 0.9 + (i % 2) * 0.12, 1);
+  }
+  const leafGeometry = new THREE.SphereGeometry(0.135 * scale, 9, 7);
+  const leaves = new THREE.InstancedMesh(leafGeometry, makeLeafMaterial(colors[1]), 54);
+  const dummy = new THREE.Object3D();
+  for (let i = 0; i < 54; i++) {
+    const angle = seeded(i + x * 31 + z * 17) * Math.PI * 2;
+    const radius = 0.65 + seeded(i + x * 19 + z * 23) * 1.12;
+    const y = 2.65 + seeded(i + x * 13 + z * 29) * 1.9;
+    dummy.position.set(Math.cos(angle) * radius * scale, y * scale, Math.sin(angle) * radius * 0.78 * scale);
+    dummy.scale.set(0.9 + seeded(i + 71) * 0.9, 0.55 + seeded(i + 83) * 0.7, 0.8 + seeded(i + 97) * 0.8);
+    dummy.rotation.set(seeded(i + 101) * 0.6, angle, seeded(i + 113) * 0.6);
+    dummy.updateMatrix();
+    leaves.setMatrixAt(i, dummy.matrix);
+  }
+  leaves.instanceMatrix.needsUpdate = true;
+  tree.add(leaves);
   tree.userData.windPhase = seeded(x * 21 + z * 7) * Math.PI * 2;
-  tree.userData.windStrength = 0.008 + seeded(x + z * 5) * 0.009;
+  tree.userData.windStrength = 0.006 + seeded(x + z * 5) * 0.007;
   windTrees.push({ group: tree, phase: tree.userData.windPhase, strength: tree.userData.windStrength });
+  treeObstacles.push({ x, z, radius: 0.43 * scale, height: trunkHeight });
   scene.add(tree);
 }
 
@@ -519,14 +545,18 @@ function addHut(): void {
   const x = -7;
   const z = 1;
   hut.position.set(x, terrainHeight(x, z), z);
-  const wall = new THREE.MeshStandardMaterial({ color: '#d6bd91', roughness: 1, flatShading: true });
-  const roof = new THREE.MeshStandardMaterial({ color: '#a85f4c', roughness: 1, flatShading: true });
-  const darkWood = new THREE.MeshStandardMaterial({ color: '#5a4937', roughness: 1 });
+  const wall = new THREE.MeshStandardMaterial({ color: '#cbb892', roughness: 0.92, bumpScale: 0.025 });
+  const roof = new THREE.MeshStandardMaterial({ color: '#875044', roughness: 0.94 });
+  const darkWood = makeBarkMaterial();
   const plaster = addOutlinedMesh(hut, new THREE.BoxGeometry(5.2, 3.1, 4.4), wall);
   plaster.position.y = 1.58;
-  const roofMesh = addOutlinedMesh(hut, new THREE.ConeGeometry(3.8, 2.5, 4), roof, 14);
-  roofMesh.position.y = 4.35;
-  roofMesh.rotation.y = Math.PI / 4;
+  const roofFront = addOutlinedMesh(hut, new THREE.BoxGeometry(6.15, 0.28, 3.25), roof);
+  roofFront.position.set(0, 3.22, 0.92);
+  roofFront.rotation.x = -0.48;
+  const roofBack = addOutlinedMesh(hut, new THREE.BoxGeometry(6.15, 0.28, 3.25), roof);
+  roofBack.position.set(0, 3.22, -0.92);
+  roofBack.rotation.x = 0.48;
+  boxObstacles.push({ x, y: terrainHeight(x, z) + 1.55, z, hx: 2.6, hy: 1.55, hz: 2.2 });
   const door = addOutlinedMesh(hut, new THREE.BoxGeometry(1.05, 1.85, 0.12), darkWood);
   door.position.set(0.5, 0.93, 2.26);
   const windowMaterial = new THREE.MeshStandardMaterial({ color: '#8bb4ac', roughness: 0.4 });
@@ -541,7 +571,7 @@ function addHut(): void {
 
   const camp = new THREE.Group();
   camp.position.set(-2.8, terrainHeight(-2.8, 5), 5);
-  const stones = new THREE.MeshStandardMaterial({ color: '#827d6c', flatShading: true });
+  const stones = makeRockMaterial();
   for (let i = 0; i < 7; i++) {
     const angle = i / 7 * Math.PI * 2;
     const rock = addOutlinedMesh(camp, new THREE.DodecahedronGeometry(0.38, 0), stones, 22, 0.62);
@@ -549,7 +579,7 @@ function addHut(): void {
     rock.scale.set(1, 0.55, 0.8);
   }
   const ember = new THREE.Mesh(
-    new THREE.ConeGeometry(0.2, 0.65, 5),
+    new THREE.SphereGeometry(0.28, 18, 12),
     new THREE.MeshStandardMaterial({ color: '#d7864e', emissive: '#6c2b19', emissiveIntensity: 0.4 })
   );
   ember.position.y = 0.45;
@@ -686,14 +716,15 @@ function addStone(x: number, z: number, size: number): void {
   group.position.set(x, terrainHeight(x, z), z);
   const stone = addOutlinedMesh(
     group,
-    new THREE.DodecahedronGeometry(size, 0),
-    new THREE.MeshStandardMaterial({ color: '#9b9b88', flatShading: true, roughness: 1 }),
+    new THREE.SphereGeometry(size, 24, 18),
+    makeRockMaterial(),
     18,
     0.68
   );
   stone.position.y = size * 0.45;
   stone.rotation.set(0.2, seeded(x * 9 + z) * 2, 0.1);
   stone.scale.set(1.2, 0.78, 0.9);
+  rockObstacles.push({ x, z, radius: size * 0.92 });
   scene.add(group);
 }
 
@@ -805,19 +836,19 @@ function addTraveller(): void {
   const skin = new THREE.MeshStandardMaterial({ color: '#dcae82', roughness: 1, flatShading: true });
   const hair = new THREE.MeshStandardMaterial({ color: '#4d4035', roughness: 1, flatShading: true });
   const dark = new THREE.MeshStandardMaterial({ color: '#51473d', roughness: 1, flatShading: true });
-  const body = addOutlinedMesh(playerVisual, new THREE.CylinderGeometry(0.37, 0.48, 1.15, 7), coat, 18);
+  const body = addOutlinedMesh(playerVisual, new THREE.CylinderGeometry(0.37, 0.48, 1.15, 24, 4), coat);
   body.position.y = 1.0;
   body.scale.set(1, 1, 0.82);
-  const scarf = addOutlinedMesh(playerVisual, new THREE.TorusGeometry(0.34, 0.1, 5, 9), cloth, 20);
+  const scarf = addOutlinedMesh(playerVisual, new THREE.TorusGeometry(0.34, 0.1, 10, 28), cloth);
   scarf.position.y = 1.55;
   scarf.rotation.x = Math.PI / 2;
-  const head = addOutlinedMesh(playerVisual, new THREE.SphereGeometry(0.39, 9, 7), skin, 22);
+  const head = addOutlinedMesh(playerVisual, new THREE.SphereGeometry(0.39, 24, 18), skin);
   head.position.set(0, 1.85, -0.05);
-  const cap = addOutlinedMesh(playerVisual, new THREE.SphereGeometry(0.4, 8, 6, 0, Math.PI * 2, 0, Math.PI * 0.55), hair, 22);
+  const cap = addOutlinedMesh(playerVisual, new THREE.SphereGeometry(0.4, 24, 16, 0, Math.PI * 2, 0, Math.PI * 0.55), hair);
   cap.position.set(0, 2.02, -0.05);
   const eyeMaterial = new THREE.MeshBasicMaterial({ color: '#3b3029' });
   for (const side of [-1, 1]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 5), eyeMaterial);
+    const eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 12, 10), eyeMaterial);
     eye.position.set(side * 0.14, 1.88, -0.405);
     playerVisual.add(eye);
   }
@@ -827,14 +858,14 @@ function addTraveller(): void {
   for (const side of [-1, 1]) {
     const armPivot = new THREE.Group();
     armPivot.position.set(side * 0.48, 1.38, 0);
-    const arm = addOutlinedMesh(armPivot, new THREE.CylinderGeometry(0.12, 0.15, 0.72, 7), coat, 18);
+    const arm = addOutlinedMesh(armPivot, new THREE.CylinderGeometry(0.12, 0.15, 0.72, 16, 3), coat);
     arm.position.y = -0.3;
     arm.rotation.z = side * -0.12;
     playerVisual.add(armPivot);
     arms.push(armPivot);
     const legPivot = new THREE.Group();
     legPivot.position.set(side * 0.22, 0.55, 0);
-    const leg = addOutlinedMesh(legPivot, new THREE.CylinderGeometry(0.13, 0.16, 0.66, 7), dark, 18);
+    const leg = addOutlinedMesh(legPivot, new THREE.CylinderGeometry(0.13, 0.16, 0.66, 16, 3), dark);
     leg.position.y = -0.29;
     playerVisual.add(legPivot);
     arms.push(legPivot);
@@ -857,21 +888,22 @@ function addCritter(x: number, z: number, shade: string, phase: number): void {
   const group = new THREE.Group();
   group.position.set(x, terrainHeight(x, z), z);
   const fur = new THREE.MeshStandardMaterial({ color: shade, flatShading: true, roughness: 1 });
-  const body = addOutlinedMesh(group, new THREE.IcosahedronGeometry(0.55, 1), fur, 19, 0.72);
+  const body = addOutlinedMesh(group, new THREE.SphereGeometry(0.55, 24, 18), fur);
   body.position.set(0, 0.52, 0.04);
   body.scale.set(1.2, 0.82, 0.9);
-  const head = addOutlinedMesh(group, new THREE.SphereGeometry(0.36, 8, 7), fur, 20, 0.72);
+  const head = addOutlinedMesh(group, new THREE.SphereGeometry(0.36, 20, 16), fur, 0.72);
   head.position.set(0.38, 0.83, -0.12);
   for (const side of [-1, 1]) {
-    const ear = addOutlinedMesh(group, new THREE.ConeGeometry(0.13, 0.65, 6), fur, 18, 0.65);
-    ear.position.set(0.26 + side * 0.2, 1.33, -0.13);
+    const ear = addOutlinedMesh(group, new THREE.SphereGeometry(0.17, 16, 12), fur);
+    ear.position.set(0.26 + side * 0.2, 1.25, -0.13);
+    ear.scale.set(0.68, 1.7, 0.62);
     ear.rotation.z = side * -0.23;
     const eye = new THREE.Mesh(new THREE.SphereGeometry(0.035, 6, 5), new THREE.MeshBasicMaterial({ color: '#342d28' }));
     eye.position.set(0.63, 0.91, side * 0.19 - 0.17);
     group.add(eye);
   }
   const tail = new THREE.Mesh(
-    new THREE.SphereGeometry(0.22, 7, 6),
+    new THREE.SphereGeometry(0.22, 16, 12),
     new THREE.MeshStandardMaterial({ color: '#f0dfc3', flatShading: true })
   );
   tail.position.set(-0.58, 0.7, 0.1);
@@ -881,17 +913,19 @@ function addCritter(x: number, z: number, shade: string, phase: number): void {
 }
 
 function createWorld(): void {
-  const hemisphere = new THREE.HemisphereLight('#f4f2da', '#68785b', 2.15);
+  const hemisphere = new THREE.HemisphereLight('#dce8ff', '#4f6040', 1.45);
   scene.add(hemisphere);
-  const sun = new THREE.DirectionalLight('#fff0d2', 2.35);
+  scene.add(new THREE.AmbientLight('#f7e8d0', 0.42));
+  const sun = new THREE.DirectionalLight('#fff0d9', 3.1);
   sun.position.set(-18, 30, 12);
   sun.castShadow = true;
-  sun.shadow.mapSize.set(1024, 1024);
+  sun.shadow.mapSize.set(1536, 1536);
   sun.shadow.camera.left = -35;
   sun.shadow.camera.right = 35;
   sun.shadow.camera.top = 35;
   sun.shadow.camera.bottom = -35;
-  sun.shadow.normalBias = 0.04;
+  sun.shadow.normalBias = 0.025;
+  sun.shadow.bias = -0.00012;
   scene.add(sun);
 
   addDistantLandscape();
