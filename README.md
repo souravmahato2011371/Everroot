@@ -2,55 +2,62 @@
 
 **Every root holds a story.**
 
-Everroot is an original, single-player, third-person 3D fantasy exploration game for the browser. Its visual identity is a hand-drawn sketchbook: low-poly 3D forms, dark ink contours, pencil-like marks, textured surfaces, warm illustrated colours, and soft storybook lighting.
+Everroot is an original single-player, third-person 3D adventure for the browser. The visual direction is a natural, richly detailed fantasy world: smooth forms, detailed surface materials, fine terrain and bark texture, atmospheric lighting, soft shadows, and expressive wildlife. The project is moving away from low-poly styling.
 
 ## Current playable foundation
 
-The first 3D vertical slice includes:
-- A real Three.js 3D world with a perspective camera and a follow-camera.
-- A stylized traveller with simple idle and walking animation.
-- A forest clearing, a small hand-built settlement, a winding trail, a pond, stones, logs, flowers, and illustrated trees.
-- Friendly forest critters that wander around the clearing.
-- Collectable berries, wood, and stone.
-- Keyboard movement, a mobile touch joystick, tap-to-walk, and an interaction button.
-- Local browser saving for the traveller's position and inventory.
-- A sketchbook-inspired interface and visible startup error handling.
+- Three.js real-time 3D rendering with physically based materials and tone mapping.
+- Procedural terrain and generated surface maps for ground, bark and stone.
+- Smooth tree canopies, instanced foliage and detailed forest props.
+- A woodland settlement, winding trail, pond and distant landscape.
+- A third-person traveller with basic idle and walk motion.
+- Rapier 3D physics with a terrain triangle mesh, character capsule, tree and building collision, ground snapping, slope limits and autostep.
+- Dynamic rolling stones with rigid-body physics.
+- Accelerated movement, camera-relative controls, sprint, jump and tap-to-walk.
+- Touch joystick, swipe camera orbit, pinch zoom, interaction and local save data.
 
-This is a foundation slice, not the finished game. The next milestones are improved 3D character models and animation, deeper exploration, quests, crafting, settlement building, puzzles, sound, and additional regions.
+This is an upgraded foundation slice, not a finished hyper-realistic game. The current environment and textures are generated procedurally. High-end photorealism still needs authored character and environment assets, complete PBR texture sets, advanced animation, sound, and performance testing on actual Android devices.
 
 ## Technology
 
-- Three.js for real-time 3D rendering
+- Three.js 0.187
+- Rapier 3D compatibility package
 - TypeScript and Vite
 - GitHub Actions for type-checking and production builds
 - GitHub Pages for hosting
 
 ## Controls
 
-- Keyboard: WASD or arrow keys
-- Touch: drag the lower-left joystick to move
-- Tap the ground to walk to that location
-- E or Space: interact with nearby resources and friends
-- Interact button: use touch interaction
-- Save Journey or Escape: save progress
+**Touch**
+- Drag the lower-left joystick to move.
+- Hold **HOLD TO RUN** to sprint.
+- Tap **JUMP** while grounded.
+- Tap the ground to walk to a location.
+- Drag on the right side to rotate the camera.
+- Pinch with two fingers to zoom.
+- Use **INTERACT** near resources or forest friends.
+- Use **SAVE JOURNEY** to save.
+
+**Keyboard**
+- WASD or arrow keys: move relative to the camera.
+- Shift: sprint.
+- Space: jump.
+- E: interact.
+- Escape: save.
+- Drag with the mouse on the right side: rotate the camera.
+- Mouse wheel: zoom.
 
 ## Development workflow
 
-The project is designed for an Android-tablet workflow using ChatGPT and GitHub:
-- ChatGPT prepares and updates project files in the connected repository.
-- GitHub Actions installs dependencies, type-checks the TypeScript, and builds the game in the cloud.
-- GitHub Pages hosts the game.
-- All project work is committed directly to the `main` branch.
-
-No local coding app, PC, or terminal is required for the normal workflow.
+The project is designed for an Android-tablet workflow using ChatGPT and GitHub. ChatGPT prepares and updates project files; GitHub Actions type-checks and builds the game in the cloud; GitHub Pages hosts the result. All project work is committed directly to the `main` branch. No local PC, coding app or terminal is required for the normal workflow.
 
 ## Design pillars
 
-1. **True 3D exploration:** the world is built from 3D geometry and viewed through a perspective camera.
-2. **Sketchbook fantasy:** visible contours, imperfect linework, textured surfaces, and illustrated colour.
-3. **Touch-first play:** controls are usable on an Android tablet as well as a keyboard.
-4. **A living forest:** wildlife, resources, gathering, and a settlement that can grow over time.
-5. **A complete single-player journey:** no online account or backend is required for the core game.
+1. **True 3D exploration:** a perspective world and third-person camera.
+2. **Natural detailed visuals:** smooth forms, material detail, atmospheric lighting and shadows.
+3. **Physical movement:** collision-aware character control, slopes, jumping and interactive rigid bodies.
+4. **Touch-first play:** movement, camera orbit and zoom designed for Android tablets.
+5. **A living forest:** wildlife, resources, gathering, crafting and a settlement that can grow over time.
 
 ## Deployment
 
