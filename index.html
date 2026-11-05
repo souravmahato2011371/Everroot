@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
     <meta name="theme-color" content="#c6d5bd" />
-    <meta name="description" content="Everroot — a hand-drawn 3D fantasy world waiting to be explored." />
+    <meta name="description" content="Everroot — a detailed third-person 3D adventure with realistic materials and physics." />
     <title>Everroot — Every root holds a story</title>
     <style>
       :root {
@@ -34,8 +34,7 @@
         z-index: 2;
         pointer-events: none;
         background:
-          radial-gradient(ellipse at 50% 44%, transparent 46%, rgba(49, 62, 42, .16) 100%),
-          repeating-linear-gradient(0deg, rgba(70, 60, 42, .022) 0 1px, transparent 1px 5px);
+          radial-gradient(ellipse at 50% 44%, transparent 52%, rgba(25, 35, 25, .12) 100%);
         mix-blend-mode: multiply;
       }
       .paper {
@@ -75,7 +74,7 @@
         position: fixed;
         z-index: 6;
         left: 50%;
-        bottom: max(23px, env(safe-area-inset-bottom));
+        bottom: max(142px, calc(env(safe-area-inset-bottom) + 128px));
         transform: translate(-50%, 12px);
         max-width: min(88vw, 480px);
         padding: 10px 16px;
@@ -144,6 +143,22 @@
       }
       button:active { transform: translate(1px, 2px); box-shadow: 1px 1px 0 rgba(58,50,40,.2); }
       #interact { background: #d1dfb8; min-width: 106px; min-height: 52px; font-size: 13px; }
+      #jump { background: #dce4ce; }
+      #run { background: #e4c9a6; font-size: 10px; letter-spacing: .08em; }
+      #look-hint {
+        position: fixed;
+        z-index: 4;
+        right: max(18px, env(safe-area-inset-right));
+        top: max(112px, calc(env(safe-area-inset-top) + 96px));
+        padding: 7px 10px;
+        border-radius: 6px;
+        background: rgba(239, 235, 214, .72);
+        color: #4b4a3c;
+        font: 600 9px/1.35 system-ui, sans-serif;
+        letter-spacing: .08em;
+        text-align: right;
+        pointer-events: none;
+      }
       #loading, #error {
         position: fixed;
         z-index: 20;
@@ -172,6 +187,8 @@
         button { min-height: 37px; }
         #interact { min-height: 43px; }
         #save { top: 72px; }
+        #message { bottom: max(110px, calc(env(safe-area-inset-bottom) + 104px)); }
+        #look-hint { top: max(70px, calc(env(safe-area-inset-top) + 58px)); }
       }
     </style>
   </head>
@@ -184,8 +201,9 @@
     <button id="save" type="button">SAVE JOURNEY</button>
     <div id="controls">
       <div id="joystick" aria-label="Movement joystick"><div id="joystick-knob"></div></div>
-      <div class="actions"><button id="interact" type="button">INTERACT</button></div>
+      <div class="actions"><button id="jump" type="button">JUMP</button><button id="run" type="button">HOLD TO RUN</button><button id="interact" type="button">INTERACT</button></div>
     </div>
+    <div id="look-hint">DRAG RIGHT TO LOOK<br>PINCH TO ZOOM</div>
     <div id="message" class="paper" role="status" aria-live="polite"></div>
     <div id="loading"><div class="loading-card paper"><strong>Everroot</strong>Waking the forest…</div></div>
     <div id="error" role="alert"></div>
