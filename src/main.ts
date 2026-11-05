@@ -973,6 +973,135 @@ function createWorld(): void {
   camera.lookAt(0, 1, 6);
 }
 
+function createDynamicPhysicsProps(): void {
+  const material = makeRockMaterial();
+  const props = [
+    { x: -2.8, z: 7.2, radius: 0.46 },
+    { x: 2.8, z: 8.2, radius: 0.56 },
+    { x: 4.8, z: 4.1, radius: 0.42 },
+    { x: -11.4, z: 8.8, radius: 0.5 }
+  ];
+  for (const item of props) {
+    const mesh = new THREE.Mesh(new THREE.SphereGeometry(item.radius, 28, 20), material);
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    scene.add(mesh);
+    const body = physicsWorld.createRigidBody(
+      RAPIER.RigidBodyDesc.dynamic().setTranslation(
+        item.x,
+        terrainHeight(item.x, item.z) + item.radius + 0.42,
+        item.z
+      )
+    );
+    physicsWorld.createCollider(
+      RAPIER.ColliderDesc.ball(item.radius).setDensity(2.1).setFriction(0.92).setRestitution(0.08),
+      body
+    );
+    dynamicProps.push({ body, mesh });
+  }
+}
+
+async function createPhysics(): Promise<void> {
+  await RAPIER.init();
+  physicsWorld = new RAPIER.World({ x: 0, y: -22, z: 0 });
+  physicsWorld.timestep = PHYSICS_STEP;
+
+  if (!terrainGeometry || !terrainGeometry.index) {
+    throw new Error('The terrain collision mesh is missing.');
+  }
+  const vertices = new Float32Array(terrainGeometry.attributes.position.array);
+  const indices = Uint32Array.from(terrainGeometry.index.array as ArrayLike<number>);
+  physicsWorld.createCollider(
+    RAPIER.ColliderDesc.trimesh(vertices, indices).setFriction(1.05).setRestitution(0)
+  );
+
+  for (const tree of treeObstacles) {
+    physicsWorld.createCollider(
+      RAPIER.ColliderDesc.cylinder(tree.height * 0.5, tree.radius)
+        .setTranslation(tree.x, terrainHeight(tree.x, tree.z) + tree.height * 0.5, tree.z)
+        .setFriction(0.9)
+    );
+  }
+  for (const box of boxObstacles) {
+    physicsWorld.createCollider(
+      RAPIER.ColliderDesc.cuboid(box.hx, box.hy, box.hz)
+        .setTranslation(box.x, box.y, box.z)
+        .setFriction(0.8)
+    );
+  }
+  for (const rock of rockObstacles) {
+    physicsWorld.createCollider(
+      RAPIER.ColliderDesc.ball(rock.radius)
+        .setTranslation(rock.x, terrainHeight(rock.x, rock.z) + rock.radius * 0.48, rock.z)
+        .setFriction(0.95)
+    );
+  }
+
+  const start = player.position;
+  playerBody = physicsWorld.createRigidBody(
+    RAPIER.RigidBodyDesc.kinematicPositionBased().setTranslation(
+      start.x,
+      terrainHeight(start.x, start.z) + PLAYER_CAPSULE_CENTER + 0.04,
+      start.z
+    )
+  );
+  playerCollider = physicsWorld.createCollider(
+    RAPIER.ColliderDesc.capsule(0.72, 0.36).setFriction(0).setRestitution(0),
+    playerBody
+  );
+
+  characterController = physicsWorld.createCharacterController(0.035);
+  characterController.setUp({ x: 0, y: 1, z: 0 });
+  characterController.setMaxSlopeClimbAngle(48 * Math.PI / 180);
+  characterController.setMinSlopeSlideAngle(34 * Math.PI / 180);
+  characterController.enableAutostep(0.34, 0.18, true);
+  characterController.enableSnapToGround(0.3);
+  characterController.setApplyImpulsesToDynamicBodies(true);
+
+  createDynamicPhysicsProps();
+  physicsWorld.step();
+}
+
+function stepPhysics(delta: number): void {
+  if (!physicsWorld || !characterController || !playerBody || !playerCollider) return;
+  physicsAccumulator += Math.min(delta, 0.05);
+  let steps = 0;
+  while (physicsAccumulator >= PHYSICS_STEP && steps < 3) {
+    if (jumpRequested && isGrounded) {
+      verticalVelocity = 8.2;
+      isGrounded = false;
+    }
+    verticalVelocity = Math.max(-26, verticalVelocity - 22 * PHYSICS_STEP);
+    const current = playerBody.translation();
+    characterController.computeColliderMovement(playerCollider, {
+      x: playerVelocity.x * PHYSICS_STEP,
+      y: verticalVelocity * PHYSICS_STEP,
+      z: playerVelocity.z * PHYSICS_STEP
+    });
+    const corrected = characterController.computedMovement();
+    playerBody.setNextKinematicTranslation({
+      x: current.x + corrected.x,
+      y: current.y + corrected.y,
+      z: current.z + corrected.z
+    });
+    physicsWorld.step();
+    isGrounded = characterController.computedGrounded();
+    if (isGrounded && verticalVelocity < 0) verticalVelocity = -1.35;
+
+    const position = playerBody.translation();
+    player.position.set(position.x, position.y - PLAYER_CAPSULE_CENTER, position.z);
+    for (const item of dynamicProps) {
+      const bodyPosition = item.body.translation();
+      const rotation = item.body.rotation();
+      item.mesh.position.set(bodyPosition.x, bodyPosition.y, bodyPosition.z);
+      item.mesh.quaternion.set(rotation.x, rotation.y, rotation.z, rotation.w);
+    }
+    physicsAccumulator -= PHYSICS_STEP;
+    steps++;
+  }
+  jumpRequested = false;
+}
+
 function updateStats(): void {
   ui.stats.textContent = `♥ 5   •   Berries ${inventory.berries}   •   Wood ${inventory.wood}   •   Stone ${inventory.stone}`;
 }
