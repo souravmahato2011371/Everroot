@@ -98,7 +98,7 @@ export class WorldScene extends Phaser.Scene {
     // pond
     g.fillStyle(0x244f58, 1).fillEllipse(1390, 330, 280, 180);
     g.lineStyle(5, 0x78a69a, 0.6).strokeEllipse(1390, 330, 280, 180);
-    g.destroy();
+    // Keep the world graphics alive so Phaser can render them each frame.
   }
 
   private drawTree(x: number, y: number, scale: number): void {
