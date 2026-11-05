@@ -1219,34 +1219,98 @@ ui.joystick.addEventListener('pointerup', releaseJoystick);
 ui.joystick.addEventListener('pointercancel', releaseJoystick);
 ui.interact.addEventListener('click', interact);
 ui.save?.addEventListener('click', saveGame);
+ui.jump?.addEventListener('click', () => { if (isGrounded) jumpRequested = true; });
+ui.run?.addEventListener('pointerdown', (event) => { event.preventDefault(); isRunning = true; });
+const releaseRun = (): void => { isRunning = false; };
+ui.run?.addEventListener('pointerup', releaseRun);
+ui.run?.addEventListener('pointercancel', releaseRun);
+ui.run?.addEventListener('pointerleave', releaseRun);
 
 const keys = new Set<string>();
 window.addEventListener('keydown', (event) => {
   keys.add(event.key.toLowerCase());
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(event.key.toLowerCase())) event.preventDefault();
-  if (event.key.toLowerCase() === 'e' || event.key === ' ') interact();
+  if (event.key.toLowerCase() === 'e') interact();
+  if (event.key.toLowerCase() === ' ') { event.preventDefault(); if (isGrounded) jumpRequested = true; }
   if (event.key.toLowerCase() === 'escape') saveGame();
 });
 window.addEventListener('keyup', (event) => keys.delete(event.key.toLowerCase()));
-window.addEventListener('blur', () => keys.clear());
+window.addEventListener('blur', () => { keys.clear(); isRunning = false; });
+
+function setWalkTargetFromScreen(clientX: number, clientY: number): void {
+  if (!terrainMesh) return;
+  const rect = renderer.domElement.getBoundingClientRect();
+  pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
+  raycaster.setFromCamera(pointer, camera);
+  const hit = raycaster.intersectObject(terrainMesh, false)[0];
+  if (!hit) return;
+  if (Math.hypot(hit.point.x - player.position.x, hit.point.z - player.position.z) > 0.8) {
+    targetPosition = new THREE.Vector3(
+      THREE.MathUtils.clamp(hit.point.x, -LIMIT, LIMIT),
+      0,
+      THREE.MathUtils.clamp(hit.point.z, -LIMIT, LIMIT)
+    );
+  }
+}
 
 renderer.domElement.addEventListener('pointerdown', (event) => {
   if (event.pointerType === 'mouse' && event.button !== 0) return;
-  const rect = renderer.domElement.getBoundingClientRect();
-  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
-  raycaster.setFromCamera(pointer, camera);
-  const point = new THREE.Vector3();
-  if (raycaster.ray.intersectPlane(groundPlane, point)) {
-    if (Math.hypot(point.x - player.position.x, point.z - player.position.z) > 2.1) {
-      targetPosition = new THREE.Vector3(
-        THREE.MathUtils.clamp(point.x, -LIMIT, LIMIT),
-        0,
-        THREE.MathUtils.clamp(point.z, -LIMIT, LIMIT)
-      );
-    }
+  activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  renderer.domElement.setPointerCapture(event.pointerId);
+  if (activePointers.size === 2) {
+    const points = [...activePointers.values()];
+    pinchStartDistance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+    pinchStartZoom = cameraDistance;
+    cameraPointerId = null;
+    return;
+  }
+  if (event.clientX >= window.innerWidth * 0.38) {
+    cameraPointerId = event.pointerId;
+    cameraLastX = event.clientX;
+    cameraLastY = event.clientY;
+    cameraDragDistance = 0;
+    cameraPointerStartedAt = performance.now();
+  } else {
+    cameraPointerId = null;
+    setWalkTargetFromScreen(event.clientX, event.clientY);
   }
 });
+
+renderer.domElement.addEventListener('pointermove', (event) => {
+  if (!activePointers.has(event.pointerId)) return;
+  activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+  if (activePointers.size >= 2) {
+    const points = [...activePointers.values()];
+    const distance = Math.hypot(points[0].x - points[1].x, points[0].y - points[1].y);
+    if (pinchStartDistance > 0) {
+      cameraDistance = THREE.MathUtils.clamp(pinchStartZoom * pinchStartDistance / Math.max(1, distance), 8.5, 25);
+    }
+    return;
+  }
+  if (event.pointerId !== cameraPointerId) return;
+  const dx = event.clientX - cameraLastX;
+  const dy = event.clientY - cameraLastY;
+  cameraDragDistance += Math.abs(dx) + Math.abs(dy);
+  cameraYaw -= dx * 0.006;
+  cameraPitch = THREE.MathUtils.clamp(cameraPitch + dy * 0.004, 0.18, 1.02);
+  cameraLastX = event.clientX;
+  cameraLastY = event.clientY;
+});
+
+const finishPointer = (event: PointerEvent): void => {
+  if (event.pointerId === cameraPointerId && cameraDragDistance < 12 && performance.now() - cameraPointerStartedAt < 280) {
+    setWalkTargetFromScreen(event.clientX, event.clientY);
+  }
+  activePointers.delete(event.pointerId);
+  if (event.pointerId === cameraPointerId) cameraPointerId = null;
+  if (activePointers.size < 2) pinchStartDistance = 0;
+};
+renderer.domElement.addEventListener('pointerup', finishPointer);
+renderer.domElement.addEventListener('pointercancel', finishPointer);
+renderer.domElement.addEventListener('wheel', (event) => {
+  cameraDistance = THREE.MathUtils.clamp(cameraDistance + event.deltaY * 0.012, 8.5, 25);
+}, { passive: true });
 
 function resize(): void {
   const width = Math.max(1, window.innerWidth);
