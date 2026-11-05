@@ -146,14 +146,9 @@ export class WorldScene extends Phaser.Scene {
   }
 
   private createHud(): void {
-    const fixed = (obj: Phaser.GameObjects.GameObject) => {
-      this.add.existing(obj);
-      (obj as Phaser.GameObjects.Components.ScrollFactor).setScrollFactor(0);
-    };
     this.stats = this.add.text(18, 16, '', { fontFamily: 'Arial', fontSize: '16px', color: '#f5edcf', backgroundColor: '#17251edc', padding: { x: 12, y: 9 } }).setScrollFactor(0).setDepth(10000);
     this.message = this.add.text(18, 66, '', { fontFamily: 'Arial', fontSize: '14px', color: '#f8e9c2', backgroundColor: '#17251edc', padding: { x: 12, y: 8 } }).setScrollFactor(0).setDepth(10000);
     this.hint = this.add.text(18, 0, 'Move: WASD / arrows / left touch  •  Tap ground to walk  •  E: gather  •  F: defend  •  Save: auto', { fontFamily: 'Arial', fontSize: '12px', color: '#d6dfc7', backgroundColor: '#17251ecc', padding: { x: 10, y: 7 } }).setScrollFactor(0).setDepth(10000);
-    fixed(this.hint);
     this.layoutHud();
     this.scale.on('resize', this.layoutHud, this);
     this.refreshStats();
