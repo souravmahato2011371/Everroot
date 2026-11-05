@@ -221,32 +221,6 @@ function addOutlinedMesh(
   return mesh;
 }
 
-function addOutlinedMesh(
-  parent: THREE.Object3D,
-  geometry: THREE.BufferGeometry,
-  material: THREE.Material,
-  threshold = 24,
-  opacity = 0.76
-): THREE.Mesh {
-  const mesh = new THREE.Mesh(geometry, material);
-  mesh.castShadow = true;
-  mesh.receiveShadow = true;
-  parent.add(mesh);
-  const edges = new THREE.EdgesGeometry(geometry, threshold);
-  const ink = new THREE.LineSegments(
-    edges,
-    new THREE.LineBasicMaterial({
-      color: '#40362d',
-      transparent: true,
-      opacity,
-      depthWrite: false
-    })
-  );
-  ink.renderOrder = 2;
-  mesh.add(ink);
-  return mesh;
-}
-
 function addGround(): void {
   const segments = 128;
   const positions: number[] = [];
