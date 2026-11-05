@@ -1,55 +1,57 @@
 # Everroot
 
-**A little world waiting to be explored.**
+**Every root holds a story.**
 
-Everroot is an original, single-player, 2.5D-inspired pixel-art adventure game being built mobile-first for the browser. The project is designed around an Android-tablet-only workflow using ChatGPT and GitHub.
+Everroot is an original, single-player, third-person 3D fantasy exploration game for the browser. Its visual identity is a hand-drawn sketchbook: low-poly 3D forms, dark ink contours, pencil-like marks, textured surfaces, warm illustrated colours, and soft storybook lighting.
 
-## Current build
+## Current playable foundation
 
-The first playable foundation includes:
-- A scrollable woodland clearing and a small settlement
-- A controllable traveller (keyboard, tap-to-move, and touch joystick)
-- Gatherable forest resources and a small inventory
-- Simple wandering forest critters and a basic defensive action
-- Local browser save data
+The first 3D vertical slice includes:
+- A real Three.js 3D world with a perspective camera and a follow-camera.
+- A stylized traveller with simple idle and walking animation.
+- A forest clearing, a small hand-built settlement, a winding trail, a pond, stones, logs, flowers, and illustrated trees.
+- Friendly forest critters that wander around the clearing.
+- Collectable berries, wood, and stone.
+- Keyboard movement, a mobile touch joystick, tap-to-walk, and an interaction button.
+- Local browser saving for the traveller's position and inventory.
+- A sketchbook-inspired interface and visible startup error handling.
 
-This is an early prototype, not the finished game. Art, animation, combat depth, quests, crafting, building, audio, and the wider world will be developed in stages.
+This is a foundation slice, not the finished game. The next milestones are improved 3D character models and animation, deeper exploration, quests, crafting, settlement building, puzzles, sound, and additional regions.
 
 ## Technology
 
-- Phaser 3
-- TypeScript
-- Vite
-- Browser local storage for the prototype save
-- GitHub Actions and GitHub Pages for deployment
-
-## Development workflow
-
-The project is designed to be developed through ChatGPT and GitHub only:
-- ChatGPT prepares and updates the project files in the connected GitHub repository.
-- GitHub Actions installs dependencies, type-checks the TypeScript, and builds the game in the cloud.
-- GitHub Pages hosts the playable browser version.
-- You can check commits, build results, and the game from GitHub on your Android tablet. No local coding app, PC, or terminal is part of the required workflow.
-
-GitHub Actions runs the checks automatically after each push to `main`.
+- Three.js for real-time 3D rendering
+- TypeScript and Vite
+- GitHub Actions for type-checking and production builds
+- GitHub Pages for hosting
 
 ## Controls
 
 - Keyboard: WASD or arrow keys
-- Touch: drag on the lower-left area to move
-- Tap the right side of the world to walk to a location
-- E / Space: gather or interact
-- F: defensive action
-- Esc: save
+- Touch: drag the lower-left joystick to move
+- Tap the ground to walk to that location
+- E or Space: interact with nearby resources and friends
+- Interact button: use touch interaction
+- Save Journey or Escape: save progress
 
-## Project principles
+## Development workflow
 
-1. Mobile-first and playable on touch screens.
-2. Single-player and offline-friendly.
-3. No backend required for the core game.
-4. Keep the first playable slice small, then expand through tested milestones.
-5. Keep all project work on the `main` branch.
+The project is designed for an Android-tablet workflow using ChatGPT and GitHub:
+- ChatGPT prepares and updates project files in the connected repository.
+- GitHub Actions installs dependencies, type-checks the TypeScript, and builds the game in the cloud.
+- GitHub Pages hosts the game.
+- All project work is committed directly to the `main` branch.
+
+No local coding app, PC, or terminal is required for the normal workflow.
+
+## Design pillars
+
+1. **True 3D exploration:** the world is built from 3D geometry and viewed through a perspective camera.
+2. **Sketchbook fantasy:** visible contours, imperfect linework, textured surfaces, and illustrated colour.
+3. **Touch-first play:** controls are usable on an Android tablet as well as a keyboard.
+4. **A living forest:** wildlife, resources, gathering, and a settlement that can grow over time.
+5. **A complete single-player journey:** no online account or backend is required for the core game.
 
 ## Deployment
 
-The GitHub Actions workflow builds the game and deploys the `dist` folder to GitHub Pages whenever changes are pushed to `main`. Enable GitHub Pages with **GitHub Actions** as the build and deployment source in repository Settings if it is not already enabled.
+GitHub Actions builds and deploys the `dist` folder to GitHub Pages whenever changes are pushed to `main`. Enable GitHub Pages with **GitHub Actions** as the deployment source in repository Settings if it is not already enabled.
