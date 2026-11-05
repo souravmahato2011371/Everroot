@@ -105,39 +105,121 @@ function seeded(seed: number): number {
   return value - Math.floor(value);
 }
 
-function makeSketchTexture(): THREE.CanvasTexture {
+function makeTerrainTexture(): { color: THREE.CanvasTexture; bump: THREE.CanvasTexture } {
+  const size = 512;
+  const colorCanvas = document.createElement('canvas');
+  const bumpCanvas = document.createElement('canvas');
+  colorCanvas.width = colorCanvas.height = size;
+  bumpCanvas.width = bumpCanvas.height = size;
+  const colorContext = colorCanvas.getContext('2d');
+  const bumpContext = bumpCanvas.getContext('2d');
+  if (!colorContext || !bumpContext) throw new Error('Terrain texture creation is unavailable.');
+  colorContext.fillStyle = '#718451';
+  colorContext.fillRect(0, 0, size, size);
+  bumpContext.fillStyle = '#888888';
+  bumpContext.fillRect(0, 0, size, size);
+  for (let i = 0; i < 26000; i++) {
+    const x = seeded(i + 14000) * size;
+    const y = seeded(i + 28000) * size;
+    const radius = 1 + seeded(i + 42000) * 8;
+    const alpha = 0.025 + seeded(i + 56000) * 0.085;
+    colorContext.fillStyle = i % 5 === 0
+      ? 'rgba(202,185,126,' + alpha + ')'
+      : 'rgba(27,55,28,' + alpha + ')';
+    colorContext.beginPath();
+    colorContext.ellipse(x, y, radius, radius * (0.28 + seeded(i + 70000) * 0.6), seeded(i + 84000), 0, Math.PI * 2);
+    colorContext.fill();
+    const shade = Math.floor(72 + seeded(i + 98000) * 120);
+    bumpContext.fillStyle = 'rgba(' + shade + ',' + shade + ',' + shade + ',0.22)';
+    bumpContext.beginPath();
+    bumpContext.ellipse(x, y, radius, radius * 0.48, 0, 0, Math.PI * 2);
+    bumpContext.fill();
+  }
+  for (let i = 0; i < 2000; i++) {
+    const x = seeded(i + 120000) * size;
+    const y = seeded(i + 124000) * size;
+    colorContext.strokeStyle = i % 3 === 0 ? 'rgba(210,197,143,.16)' : 'rgba(37,70,38,.12)';
+    colorContext.lineWidth = 0.6 + seeded(i + 128000) * 1.1;
+    colorContext.beginPath();
+    colorContext.moveTo(x, y);
+    colorContext.lineTo(x + 2 + seeded(i + 132000) * 9, y - 1 - seeded(i + 136000) * 5);
+    colorContext.stroke();
+  }
+  const color = new THREE.CanvasTexture(colorCanvas);
+  color.wrapS = color.wrapT = THREE.RepeatWrapping;
+  color.repeat.set(9, 9);
+  color.colorSpace = THREE.SRGBColorSpace;
+  color.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 8);
+  const bump = new THREE.CanvasTexture(bumpCanvas);
+  bump.wrapS = bump.wrapT = THREE.RepeatWrapping;
+  bump.repeat.copy(color.repeat);
+  bump.anisotropy = color.anisotropy;
+  return { color, bump };
+}
+
+function makeBarkMaterial(): THREE.MeshStandardMaterial {
+  const canvas = document.createElement('canvas');
+  canvas.width = 256;
+  canvas.height = 512;
+  const context = canvas.getContext('2d');
+  if (!context) return new THREE.MeshStandardMaterial({ color: '#806044', roughness: 1 });
+  context.fillStyle = '#76563d';
+  context.fillRect(0, 0, 256, 512);
+  for (let i = 0; i < 650; i++) {
+    const x = seeded(i + 141) * 256;
+    context.strokeStyle = i % 3 ? 'rgba(42,28,20,.23)' : 'rgba(207,160,104,.22)';
+    context.lineWidth = 1 + seeded(i + 282) * 8;
+    context.beginPath();
+    context.moveTo(x, 0);
+    context.bezierCurveTo(x + 9, 130, x - 12, 340, x + (seeded(i + 423) - 0.5) * 22, 512);
+    context.stroke();
+  }
+  const map = new THREE.CanvasTexture(canvas);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.wrapS = map.wrapT = THREE.RepeatWrapping;
+  map.repeat.set(1, 2);
+  return new THREE.MeshStandardMaterial({ map, roughness: 0.94, bumpMap: map, bumpScale: 0.12 });
+}
+
+function makeRockMaterial(): THREE.MeshStandardMaterial {
   const canvas = document.createElement('canvas');
   canvas.width = 256;
   canvas.height = 256;
   const context = canvas.getContext('2d');
-  if (!context) throw new Error('Canvas textures are not available in this browser.');
-  context.fillStyle = '#a4b68a';
+  if (!context) return new THREE.MeshStandardMaterial({ color: '#77796c', roughness: 0.94 });
+  context.fillStyle = '#858779';
   context.fillRect(0, 0, 256, 256);
-  for (let i = 0; i < 1250; i++) {
-    const x = seeded(i + 8) * 256;
-    const y = seeded(i + 900) * 256;
-    context.strokeStyle = i % 4 === 0 ? 'rgba(45,67,45,.12)' : 'rgba(238,230,190,.16)';
-    context.lineWidth = 0.5 + seeded(i + 1700);
-    context.beginPath();
-    context.moveTo(x, y);
-    context.lineTo(x + 1 + seeded(i + 2600) * 5, y - 1 - seeded(i + 3600) * 3);
-    context.stroke();
+  for (let i = 0; i < 9000; i++) {
+    const x = seeded(i + 21000) * 256;
+    const y = seeded(i + 31000) * 256;
+    const size = 0.5 + seeded(i + 41000) * 2.4;
+    const shade = Math.floor(78 + seeded(i + 51000) * 115);
+    context.fillStyle = 'rgba(' + shade + ',' + shade + ',' + (shade - 5) + ',0.18)';
+    context.fillRect(x, y, size, size);
   }
-  const texture = new THREE.CanvasTexture(canvas);
-  texture.wrapS = THREE.RepeatWrapping;
-  texture.wrapT = THREE.RepeatWrapping;
-  texture.repeat.set(7, 7);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  texture.anisotropy = Math.min(renderer.capabilities.getMaxAnisotropy(), 4);
-  return texture;
+  const map = new THREE.CanvasTexture(canvas);
+  map.colorSpace = THREE.SRGBColorSpace;
+  map.wrapS = map.wrapT = THREE.RepeatWrapping;
+  return new THREE.MeshStandardMaterial({ map, roughness: 0.96, bumpMap: map, bumpScale: 0.08 });
 }
 
-const sketchInk = new THREE.LineBasicMaterial({
-  color: '#40362d',
-  transparent: true,
-  opacity: 0.76,
-  depthWrite: false
-});
+function makeLeafMaterial(color: string): THREE.MeshStandardMaterial {
+  return new THREE.MeshStandardMaterial({ color, roughness: 0.84, metalness: 0, side: THREE.DoubleSide });
+}
+
+function addOutlinedMesh(
+  parent: THREE.Object3D,
+  geometry: THREE.BufferGeometry,
+  material: THREE.Material,
+  _threshold = 24,
+  _opacity = 0.76
+): THREE.Mesh {
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  parent.add(mesh);
+  return mesh;
+}
 
 function addOutlinedMesh(
   parent: THREE.Object3D,
@@ -166,7 +248,7 @@ function addOutlinedMesh(
 }
 
 function addGround(): void {
-  const segments = 64;
+  const segments = 128;
   const positions: number[] = [];
   const uvs: number[] = [];
   const indices: number[] = [];
@@ -192,15 +274,21 @@ function addGround(): void {
   geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
+  terrainGeometry = geometry;
+  const maps = makeTerrainTexture();
   const ground = new THREE.Mesh(
     geometry,
     new THREE.MeshStandardMaterial({
-      color: '#e0e0bc',
-      map: makeSketchTexture(),
-      roughness: 1
+      color: '#ffffff',
+      map: maps.color,
+      bumpMap: maps.bump,
+      bumpScale: 0.095,
+      roughness: 0.96,
+      metalness: 0
     })
   );
   ground.receiveShadow = true;
+  terrainMesh = ground;
   scene.add(ground);
 }
 
