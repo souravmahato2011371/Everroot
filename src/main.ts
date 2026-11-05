@@ -437,37 +437,38 @@ function addDistantLandscape(): void {
 }
 
 function addGrass(): void {
-  const blades: number[] = [];
-  const highlights: number[] = [];
-  for (let i = 0; i < 720; i++) {
+  const bladeCount = 2350;
+  const bladeGeometry = new THREE.ConeGeometry(0.035, 0.42, 5, 2);
+  bladeGeometry.translate(0, 0.21, 0);
+  const grassMaterial = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 1, vertexColors: true });
+  const grass = new THREE.InstancedMesh(bladeGeometry, grassMaterial, bladeCount);
+  grass.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+  const dummy = new THREE.Object3D();
+  const tint = new THREE.Color();
+  let count = 0;
+  for (let i = 0; i < bladeCount * 2 && count < bladeCount; i++) {
     const x = seeded(i + 3310) * 88 - 44;
     const z = seeded(i + 7710) * 88 - 44;
     const onClearing = Math.abs(x + 7) < 8.5 && Math.abs(z - 1) < 7;
     const onPond = ((x - 24) / 8.6) ** 2 + ((z + 22) / 6.4) ** 2 < 1;
-    const onPath = Math.abs(x + z * 0.5 - 1) < 2.25;
+    const onPath = Math.abs(x + z * 0.5 - 1) < 2.4;
     if (onClearing || onPond || onPath) continue;
-    const groundY = terrainHeight(x, z) + 0.035;
-    for (let blade = 0; blade < 3; blade++) {
-      const bx = x + (seeded(i * 5 + blade + 1) - 0.5) * 0.46;
-      const bz = z + (seeded(i * 7 + blade + 4) - 0.5) * 0.46;
-      const height = 0.18 + seeded(i * 11 + blade + 8) * 0.24;
-      const lean = (seeded(i * 13 + blade + 2) - 0.5) * 0.2;
-      blades.push(bx, groundY, bz, bx + lean, groundY + height, bz - 0.035);
-      if (blade === 1) {
-        highlights.push(bx + lean * 0.3, groundY + height * 0.48, bz, bx + lean, groundY + height, bz - 0.035);
-      }
-    }
+    dummy.position.set(x, terrainHeight(x, z), z);
+    dummy.rotation.set((seeded(i + 1001) - 0.5) * 0.12, seeded(i + 1002) * Math.PI * 2, (seeded(i + 1003) - 0.5) * 0.22);
+    const height = 0.65 + seeded(i + 1004) * 0.8;
+    dummy.scale.set(0.75 + seeded(i + 1005) * 0.6, height, 0.75 + seeded(i + 1006) * 0.6);
+    dummy.updateMatrix();
+    grass.setMatrixAt(count, dummy.matrix);
+    tint.setHSL(0.22 + seeded(i + 1007) * 0.045, 0.23 + seeded(i + 1008) * 0.17, 0.32 + seeded(i + 1009) * 0.19);
+    grass.setColorAt(count, tint);
+    count++;
   }
-  const baseGeometry = new THREE.BufferGeometry();
-  baseGeometry.setAttribute('position', new THREE.Float32BufferAttribute(blades, 3));
-  scene.add(new THREE.LineSegments(baseGeometry, new THREE.LineBasicMaterial({
-    color: '#526c43', transparent: true, opacity: 0.5
-  })));
-  const highlightGeometry = new THREE.BufferGeometry();
-  highlightGeometry.setAttribute('position', new THREE.Float32BufferAttribute(highlights, 3));
-  scene.add(new THREE.LineSegments(highlightGeometry, new THREE.LineBasicMaterial({
-    color: '#d0cb91', transparent: true, opacity: 0.62
-  })));
+  grass.count = count;
+  grass.instanceMatrix.needsUpdate = true;
+  if (grass.instanceColor) grass.instanceColor.needsUpdate = true;
+  grass.castShadow = false;
+  grass.receiveShadow = true;
+  scene.add(grass);
 }
 
 function addBranch(parent: THREE.Group, start: THREE.Vector3, end: THREE.Vector3, radius: number, material: THREE.Material): void {
@@ -797,30 +798,30 @@ function makeResource(kind: ResourceKind, x: number, z: number): void {
   if (kind === 'berries') {
     const leaves = new THREE.MeshStandardMaterial({ color: '#607d48', flatShading: true });
     const berry = new THREE.MeshStandardMaterial({ color: '#b95e67', flatShading: true });
-    const bush = addOutlinedMesh(group, new THREE.IcosahedronGeometry(0.58, 1), leaves, 20, 0.7);
+    const bush = addOutlinedMesh(group, new THREE.SphereGeometry(0.58, 20, 16), leaves, 20, 0.7);
     bush.position.y = 0.48;
     for (let i = 0; i < 5; i++) {
-      const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.14, 7, 6), berry);
+      const fruit = new THREE.Mesh(new THREE.SphereGeometry(0.14, 14, 10), berry);
       fruit.position.set(Math.sin(i * 2.2) * 0.39, 0.55 + (i % 2) * 0.23, Math.cos(i * 2.2) * 0.42);
       group.add(fruit);
     }
   } else if (kind === 'wood') {
     const timber = addOutlinedMesh(
       group,
-      new THREE.CylinderGeometry(0.2, 0.2, 1.8, 7),
+      new THREE.CylinderGeometry(0.2, 0.2, 1.8, 18, 2),
       new THREE.MeshStandardMaterial({ color: '#a57950', flatShading: true }),
       18
     );
     timber.rotation.z = Math.PI / 2;
     timber.position.y = 0.2;
-    const second = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 1.45, 7), timber.material);
+    const second = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.17, 1.45, 16, 2), timber.material);
     second.rotation.set(0.16, 0, -Math.PI / 2.6);
     second.position.set(0.08, 0.44, 0.28);
     group.add(second);
   } else {
     const stone = addOutlinedMesh(
       group,
-      new THREE.DodecahedronGeometry(0.52, 0),
+      new THREE.SphereGeometry(0.52, 22, 16),
       new THREE.MeshStandardMaterial({ color: '#9da294', flatShading: true }),
       18
     );
