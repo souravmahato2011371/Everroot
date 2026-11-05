@@ -3,19 +3,181 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
-    <meta name="theme-color" content="#17251e" />
-    <meta name="description" content="Everroot — a little world waiting to be explored." />
-    <title>Everroot</title>
+    <meta name="theme-color" content="#c6d5bd" />
+    <meta name="description" content="Everroot — a hand-drawn 3D fantasy world waiting to be explored." />
+    <title>Everroot — Every root holds a story</title>
     <style>
+      :root {
+        color-scheme: light;
+        --ink: #3f382f;
+        --paper: rgba(244, 237, 213, .94);
+        --paper-edge: #564a3c;
+        --moss: #59724d;
+        --rust: #a75f4b;
+      }
       * { box-sizing: border-box; }
       html, body, #game { width: 100%; height: 100%; margin: 0; overflow: hidden; }
-      body { background: #17251e; overscroll-behavior: none; }
-      #game { width: 100vw; height: 100vh; height: 100dvh; touch-action: none; }
-      canvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+      body {
+        background: #c6d5bd;
+        color: var(--ink);
+        font-family: Georgia, "Times New Roman", serif;
+        overscroll-behavior: none;
+        -webkit-tap-highlight-color: transparent;
+        user-select: none;
+      }
+      #game { position: fixed; inset: 0; width: 100vw; height: 100vh; height: 100dvh; touch-action: none; }
+      #world-canvas { display: block; width: 100%; height: 100%; touch-action: none; }
+      .paper {
+        background:
+          repeating-linear-gradient(173deg, transparent 0 13px, rgba(75,64,48,.025) 14px 15px),
+          var(--paper);
+        border: 2px solid var(--paper-edge);
+        border-radius: 5px 9px 6px 8px;
+        box-shadow: 3px 4px 0 rgba(58, 50, 40, .18);
+        position: relative;
+      }
+      .paper::after {
+        content: "";
+        position: absolute;
+        inset: 4px;
+        border: 1px solid rgba(75,64,48,.22);
+        border-radius: 3px 6px 4px 5px;
+        pointer-events: none;
+      }
+      #topbar {
+        position: fixed;
+        z-index: 5;
+        top: max(12px, env(safe-area-inset-top));
+        left: max(12px, env(safe-area-inset-left));
+        right: max(12px, env(safe-area-inset-right));
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+        pointer-events: none;
+      }
+      #brand { padding: 9px 13px 8px; min-width: 145px; }
+      #brand strong { display: block; font-size: clamp(19px, 4vw, 25px); letter-spacing: .04em; line-height: 1; }
+      #brand small { display: block; margin-top: 4px; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; }
+      #stats { padding: 10px 12px; font: 600 11px/1.45 system-ui, sans-serif; text-align: right; }
+      #message {
+        position: fixed;
+        z-index: 6;
+        left: 50%;
+        bottom: max(23px, env(safe-area-inset-bottom));
+        transform: translate(-50%, 12px);
+        max-width: min(88vw, 480px);
+        padding: 10px 16px;
+        text-align: center;
+        font: 600 12px/1.45 system-ui, sans-serif;
+        opacity: 0;
+        transition: opacity .2s ease, transform .2s ease;
+        pointer-events: none;
+      }
+      #message.visible { opacity: 1; transform: translate(-50%, 0); }
+      #controls {
+        position: fixed;
+        z-index: 7;
+        left: max(18px, env(safe-area-inset-left));
+        right: max(18px, env(safe-area-inset-right));
+        bottom: max(18px, env(safe-area-inset-bottom));
+        display: flex;
+        align-items: flex-end;
+        justify-content: space-between;
+        pointer-events: none;
+      }
+      #joystick {
+        width: 112px;
+        height: 112px;
+        border-radius: 50%;
+        border: 2px solid rgba(66,57,45,.74);
+        background: rgba(244,237,213,.45);
+        box-shadow: inset 0 0 0 5px rgba(244,237,213,.35), 2px 3px 0 rgba(58,50,40,.2);
+        position: relative;
+        pointer-events: auto;
+        touch-action: none;
+      }
+      #joystick::before, #joystick::after {
+        content: "";
+        position: absolute;
+        background: rgba(66,57,45,.18);
+        left: 50%; top: 50%; transform: translate(-50%,-50%);
+      }
+      #joystick::before { width: 1px; height: 74%; }
+      #joystick::after { width: 74%; height: 1px; }
+      #joystick-knob {
+        position: absolute;
+        z-index: 1;
+        width: 43px; height: 43px;
+        left: 50%; top: 50%;
+        margin: -21.5px 0 0 -21.5px;
+        border-radius: 50%;
+        background: #bd9870;
+        border: 2px solid var(--ink);
+        box-shadow: 1px 2px 0 rgba(58,50,40,.25);
+        pointer-events: none;
+      }
+      .actions { display: flex; flex-direction: column; gap: 9px; align-items: flex-end; pointer-events: auto; }
+      button {
+        color: var(--ink);
+        font: 700 12px/1 system-ui, sans-serif;
+        letter-spacing: .02em;
+        background: #e9d9b7;
+        border: 2px solid var(--paper-edge);
+        border-radius: 7px 5px 8px 6px;
+        box-shadow: 2px 3px 0 rgba(58,50,40,.22);
+        min-width: 90px;
+        min-height: 43px;
+        padding: 0 14px;
+        touch-action: manipulation;
+      }
+      button:active { transform: translate(1px, 2px); box-shadow: 1px 1px 0 rgba(58,50,40,.2); }
+      #interact { background: #d1dfb8; min-width: 106px; min-height: 52px; font-size: 13px; }
+      #loading, #error {
+        position: fixed;
+        z-index: 20;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        padding: 28px;
+        background: #c6d5bd;
+        text-align: center;
+        font: 600 14px/1.5 system-ui, sans-serif;
+      }
+      #loading.hidden { display: none; }
+      #error { display: none; color: #713c31; }
+      #error.visible { display: grid; }
+      .loading-card { padding: 22px 28px; max-width: 320px; }
+      .loading-card strong { display: block; font: 700 30px Georgia, serif; margin-bottom: 6px; }
+      #save { position: fixed; z-index: 8; right: max(18px, env(safe-area-inset-right)); top: 88px; min-width: 0; min-height: 34px; padding: 0 11px; font-size: 10px; opacity: .92; }
+      @media (min-width: 760px) {
+        #joystick { width: 126px; height: 126px; }
+        #joystick-knob { width: 47px; height: 47px; margin: -23.5px 0 0 -23.5px; }
+        #stats { font-size: 12px; }
+      }
+      @media (max-height: 480px) {
+        #joystick { width: 82px; height: 82px; }
+        #joystick-knob { width: 34px; height: 34px; margin: -17px 0 0 -17px; }
+        button { min-height: 37px; }
+        #interact { min-height: 43px; }
+        #save { top: 72px; }
+      }
     </style>
   </head>
   <body>
-    <div id="game"></div>
+    <main id="game" aria-label="Everroot 3D game world"></main>
+    <header id="topbar">
+      <div id="brand" class="paper"><strong>EVERROOT</strong><small>Every root holds a story</small></div>
+      <div id="stats" class="paper">♥ 5 &nbsp; • &nbsp; Berries 0 &nbsp; • &nbsp; Wood 0 &nbsp; • &nbsp; Stone 0</div>
+    </header>
+    <button id="save" type="button">SAVE JOURNEY</button>
+    <div id="controls">
+      <div id="joystick" aria-label="Movement joystick"><div id="joystick-knob"></div></div>
+      <div class="actions"><button id="interact" type="button">INTERACT</button></div>
+    </div>
+    <div id="message" class="paper" role="status" aria-live="polite"></div>
+    <div id="loading"><div class="loading-card paper"><strong>Everroot</strong>Waking the forest…</div></div>
+    <div id="error" role="alert"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
